@@ -11,7 +11,7 @@ Posting notifications works exactly like NSNotificationCenter, except that you c
 ### Swift
 
 ```swift
-TRZDarwinNotificationCenter.defaultCenter().postNotificationName("com.thomasrzhao.TRZDemoNotification");
+TRZDarwinNotificationCenter.defaultCenter().postNotificationName("com.thomasrzhao.TRZDemoNotification")
 ```
 
 ### Objective-C
@@ -30,7 +30,7 @@ You can observe notifications with either the traditional target-action pattern,
 ### Swift
 
 ```swift
-TRZDarwinNotificationCenter.defaultCenter().addObserver(self, selector:Selector("receivedNotification:"), name:"com.thomasrzhao.TRZDemoNotification");
+TRZDarwinNotificationCenter.defaultCenter().addObserver(self, selector:Selector("receivedNotification:"), name:"com.thomasrzhao.TRZDemoNotification")
 ```
 
 or
@@ -62,6 +62,18 @@ self.notificationHandle = [[TRZDarwinNotificationCenter defaultCenter] addObserv
 As with NSNotificationCenter, it's important to remove observers to avoid memory errors. To do so, just call removeObserver with the same observer and name objects you passed in to addObserver. If using the block-based API, pass in the opaque handle object returned from `addObserverForName:queue:usingBlock:`. You can do this in `dealloc` in Objective-C or in `deinit` in Swift.
 
 
+### Swift
+
+```swift
+TRZDarwinNotificationCenter.defaultCenter().removeObserver(self, name:"com.thomasrzhao.TRZDemoNotification")
+```
+
+or
+
+```swift
+TRZDarwinNotificationCenter.defaultCenter().removeObserver(self.notificationHandle, name:"com.thomasrzhao.TRZDemoNotification")
+```
+
 ### Objective-C
 
 ```objective-c
@@ -72,18 +84,6 @@ or
 
 ```objective-c
 [[TRZDarwinNotificationCenter defaultCenter] removeObserver:self.notificationHandle name:@"com.thomasrzhao.TRZDemoNotification"];
-```
-
-### Swift
-
-```swift
-TRZDarwinNotificationCenter.defaultCenter().removeObserver(self, name:"com.thomasrzhao.TRZDemoNotification");
-```
-
-or
-
-```swift
-TRZDarwinNotificationCenter.defaultCenter().removeObserver(self.notificationHandle, name:"com.thomasrzhao.TRZDemoNotification");
 ```
 
 ## Common Pitfalls
