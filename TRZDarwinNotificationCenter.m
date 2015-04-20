@@ -12,6 +12,7 @@
 @interface TRZDarwinNotificationCenter ()
 @property (nonatomic, assign) CFNotificationCenterRef darwinNotificationCenter;
 @property (nonatomic, strong) NSMutableDictionary* registeredNotifications;
+@property (nonatomic, strong) dispatch_queue_t dispatchQueue;
 @end
 
 @implementation TRZDarwinNotificationCenter
@@ -31,6 +32,7 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
     if(self) {
         self.darwinNotificationCenter = CFNotificationCenterGetDarwinNotifyCenter();
         self.registeredNotifications = [[NSMutableDictionary alloc] init];
+        self.dispatchQueue = dispatch_queue_create("com.thomasrzhao.TRZDarwinNotificationCenterQueue", NULL);
     }
     return self;
 }
@@ -50,7 +52,7 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
     queue = (queue) ? queue : [NSOperationQueue mainQueue];
     
     NSObject* object = [[NSObject alloc] init];
-    [self addBlock:^{
+    [self tz_addBlock:^{
         void (^executionBlock)(void) = ^void(void) {
             block([NSNotification notificationWithName:name object:nil]);
         };
@@ -63,42 +65,51 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
     CHECK_NOTIFICATION_NAME(notificationName);
     
     __weak id observer = notificationObserver;
-    [self addBlock:^{
+    [self tz_addBlock:^{
         NSInvocationOperation* operation = [[NSInvocationOperation alloc] initWithTarget:observer selector:notificationSelector object:[NSNotification notificationWithName:notificationName object:nil]];
         [[NSOperationQueue mainQueue] addOperation:operation];
     } forObserver:notificationObserver name:notificationName];
 }
 
-- (void)addBlock:(void (^)(void))block forObserver:(id)observer name:(NSString *)notificationName {
-    NSMapTable* observerActionMap = self.registeredNotifications[notificationName];
-    
-    if(!observerActionMap.count) {
-        CFNotificationCenterAddObserver(self.darwinNotificationCenter, (__bridge const void *)(self), &trz_darwin_notification_center_observed_notification, (__bridge CFStringRef)notificationName, NULL, 0);
-        observerActionMap = [NSMapTable mapTableWithKeyOptions:NSMapTableWeakMemory|NSMapTableObjectPointerPersonality valueOptions:NSMapTableCopyIn];
-        self.registeredNotifications[notificationName] = observerActionMap;
-    }
-    
-    NSMutableArray* actions = [observerActionMap objectForKey:observer];
-    if(!actions) {
-        actions = [NSMutableArray arrayWithObject:block];
-        [observerActionMap setObject:actions forKey:observer];
-    } else {
-        [actions addObject:block];
-    }
+- (void)tz_addBlock:(void (^)(void))block forObserver:(id)observer name:(NSString *)notificationName {
+    dispatch_sync(self.dispatchQueue, ^{
+        NSMapTable* observerActionMap = self.registeredNotifications[notificationName];
+        
+        if(!observerActionMap.count) {
+            CFNotificationCenterAddObserver(self.darwinNotificationCenter, (__bridge const void *)(self), &trz_darwin_notification_center_observed_notification, (__bridge CFStringRef)notificationName, NULL, 0);
+            observerActionMap = [NSMapTable mapTableWithKeyOptions:NSMapTableWeakMemory|NSMapTableObjectPointerPersonality valueOptions:NSMapTableCopyIn];
+            self.registeredNotifications[notificationName] = observerActionMap;
+        }
+        
+        NSMutableArray* actions = [observerActionMap objectForKey:observer];
+        if(!actions) {
+            actions = [NSMutableArray arrayWithObject:block];
+            [observerActionMap setObject:actions forKey:observer];
+        } else {
+            [actions addObject:block];
+        }
+    });
 }
 
 - (void)removeObserver:(id)notificationObserver {
     if(!notificationObserver) return;
-    
-    for(NSString* notificationName in [self.registeredNotifications allKeys]) {
-        [self removeObserver:notificationObserver name:notificationName];
-    }
+    dispatch_sync(self.dispatchQueue, ^{
+        for(NSString* notificationName in [self.registeredNotifications allKeys]) {
+            [self tz_removeObserver:notificationObserver name:notificationName];
+        }
+    });
 }
 
 - (void)removeObserver:(id)notificationObserver name:(nullable NSString *)notificationName {
     if(!notificationObserver) return;
     if(!notificationName) [self removeObserver:notificationObserver];
     
+    dispatch_sync(self.dispatchQueue, ^{
+        [self tz_removeObserver:notificationObserver name:notificationName];
+    });
+}
+
+- (void)tz_removeObserver:(id)notificationObserver name:(nullable NSString *)notificationName {
     NSMapTable* observerActionMap = self.registeredNotifications[notificationName];
     [observerActionMap removeObjectForKey:notificationObserver];
     
@@ -119,14 +130,16 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
 }
 
 - (void)notifyNotificationName:(NSString*)notificationName {
-    NSMapTable* observersForName = self.registeredNotifications[notificationName];
-
-    for(id observer in observersForName) {
-        NSMutableArray* actions = (NSMutableArray*)[observersForName objectForKey:observer];
-        for(void (^block)(void) in actions) {
-            block();
+    dispatch_sync(self.dispatchQueue, ^{
+        NSMapTable* observersForName = self.registeredNotifications[notificationName];
+        
+        for(id observer in observersForName) {
+            NSMutableArray* actions = (NSMutableArray*)[observersForName objectForKey:observer];
+            for(void (^block)(void) in actions) {
+                block();
+            }
         }
-    }
+    });
 }
 
 - (void)dealloc {
