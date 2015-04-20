@@ -43,15 +43,17 @@ self.notificationHandle = TRZDarwinNotificationCenter.defaultCenter().addObserve
 
 ### Objective-C
 
-```objective-c
-self.notificationHandle = [[TRZDarwinNotificationCenter defaultCenter] addObserverForName:@"com.thomasrzhao.TRZDemoNotification" queue:nil usingBlock:^(NSNotification * notification) {
-    //do something here
-}];
-```
-or
 
 ```objective-c
 [[TRZDarwinNotificationCenter defaultCenter] addObserver:self selector:@selector(receivedNotification:) name:@"com.thomasrzhao.TRZDemoNotification"];
+```
+
+or
+
+```objective-c
+self.notificationHandle = [[TRZDarwinNotificationCenter defaultCenter] addObserverForName:@"com.thomasrzhao.TRZDemoNotification" queue:nil usingBlock:^(NSNotification* notification) {
+    //do something here
+}];
 ```
 
 
