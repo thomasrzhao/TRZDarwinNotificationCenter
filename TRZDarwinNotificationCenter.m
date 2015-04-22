@@ -102,7 +102,10 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
 
 - (void)removeObserver:(id)notificationObserver name:(nullable NSString *)notificationName {
     if(!notificationObserver) return;
-    if(!notificationName) [self removeObserver:notificationObserver];
+    if(!notificationName) {
+        [self removeObserver:notificationObserver];
+        return;
+    }
 
     dispatch_sync(self.dispatchQueue, ^{
         [self tz_removeObserver:notificationObserver name:notificationName];
