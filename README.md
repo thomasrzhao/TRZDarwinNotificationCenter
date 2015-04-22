@@ -88,7 +88,7 @@ or
 
 ## Common Pitfalls
 
- - When using the block-based API, it is very important to retain the opaque handle object, probably by storing it in an instance variable. Because TRZDarwinNotificationCenter uses weak references to store all the observers, calling `addObserverForName:queue:usingBlock:` without saving the return value will not correctly register for the notification and nothing will happen if/when the notification is actually fired. It will also most likely result in a memory leak, as there is no longer any way to remove this observer. This class is a bit less forgiving than NSNotificationCenter in this regard.
+ - When using the block-based API, it is very important to call `removeObserver:name:` with the returned handle object when the notification's action is no longer needed. If the handle object is not removed as an observer, the block will not be deallocated and you will have a memory leak.
 
  - Since Darwin notifications do not support the sender object and userInfo values in an NSNotification object, those values are ignored when using the `postNotification:` method.
 

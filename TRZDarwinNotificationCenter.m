@@ -12,10 +12,13 @@
 @interface TRZDarwinNotificationCenter ()
 @property (nonatomic, assign) CFNotificationCenterRef darwinNotificationCenter;
 @property (nonatomic, strong) NSMutableDictionary* registeredNotifications;
+@property (nonatomic, strong) NSMutableSet* retainedObserverSet;
 @property (nonatomic, strong) dispatch_queue_t dispatchQueue;
 @end
 
 @implementation TRZDarwinNotificationCenter
+
+static const char* TRZ_DARWIN_NOTIFICATION_CENTER_DISPATCH_QUEUE_NAME = "com.thomasrzhao.TRZDarwinNotificationCenterQueue";
 
 #ifdef DEBUG
 #define CHECK_NOTIFICATION_NAME(name) do { \
@@ -32,7 +35,8 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
     if(self) {
         self.darwinNotificationCenter = CFNotificationCenterGetDarwinNotifyCenter();
         self.registeredNotifications = [[NSMutableDictionary alloc] init];
-        self.dispatchQueue = dispatch_queue_create("com.thomasrzhao.TRZDarwinNotificationCenterQueue", NULL);
+        self.retainedObserverSet = [[NSMutableSet alloc] init];
+        self.dispatchQueue = dispatch_queue_create(TRZ_DARWIN_NOTIFICATION_CENTER_DISPATCH_QUEUE_NAME, NULL);
     }
     return self;
 }
@@ -57,7 +61,7 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
             block([NSNotification notificationWithName:name object:nil]);
         };
         [queue addOperationWithBlock:executionBlock];
-    } forObserver:object name:name];
+    } forObserver:object name:name retainObserver:true];
     return object;
 }
 
@@ -68,10 +72,10 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
     [self tz_addBlock:^{
         NSInvocationOperation* operation = [[NSInvocationOperation alloc] initWithTarget:observer selector:notificationSelector object:[NSNotification notificationWithName:notificationName object:nil]];
         [[NSOperationQueue mainQueue] addOperation:operation];
-    } forObserver:notificationObserver name:notificationName];
+    } forObserver:notificationObserver name:notificationName retainObserver:false];
 }
 
-- (void)tz_addBlock:(void (^)(void))block forObserver:(id)observer name:(NSString *)notificationName {
+- (void)tz_addBlock:(void (^)(void))block forObserver:(id)observer name:(NSString *)notificationName retainObserver:(BOOL)retainObserver {
     dispatch_sync(self.dispatchQueue, ^{
         NSMapTable* observerActionMap = self.registeredNotifications[notificationName];
 
@@ -87,6 +91,10 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
             [observerActionMap setObject:actions forKey:observer];
         } else {
             [actions addObject:block];
+        }
+        
+        if(retainObserver) {
+            [self.retainedObserverSet addObject:observer];
         }
     });
 }
@@ -120,6 +128,8 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
         [self.registeredNotifications removeObjectForKey:notificationName];
         CFNotificationCenterRemoveObserver(self.darwinNotificationCenter, (__bridge const void *)(self), (__bridge CFStringRef)notificationName, nil);
     }
+    
+    [self.retainedObserverSet removeObject:notificationObserver];
 }
 
 - (void)postNotification:(NSNotification *)notification {

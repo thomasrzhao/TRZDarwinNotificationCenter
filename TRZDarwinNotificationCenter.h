@@ -14,6 +14,7 @@
  *
  *  @warning As Darwin notification names are shared throughout the system, it's important to use a reverse-DNS naming system to avoid collisions. This differs from the standard naming scheme for NSNotifications, so please be cautious.
  */
+
 @interface TRZDarwinNotificationCenter : NSObject
 NS_ASSUME_NONNULL_BEGIN
 
@@ -31,7 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param queue The operation queue to which _block_ should be added.
  *  @param block The block to be executed when the notification is received. The block is copied by the notification center and (the copy) held until the observer registration is removed. The block takes one argument, the notification.
  *
- *  @return An opaque object to act as the observer. This value must be retained; otherwise, this method will have no effect.
+ *  @return An opaque object to act as the observer. You must invoke removeObserver: or removeObserver:name:object: before any object specified by addObserverForName:queue:usingBlock: is deallocated.
  */
 - (id<NSObject>)addObserverForName:(NSString*)name queue:(nullable NSOperationQueue *)queue usingBlock:(void (^)(NSNotification *))block;
 
