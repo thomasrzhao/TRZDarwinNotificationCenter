@@ -86,9 +86,44 @@ or
 [[TRZDarwinNotificationCenter defaultCenter] removeObserver:self.notificationHandle name:@"com.thomasrzhao.TRZDemoNotification"];
 ```
 
+
+## Automatic Prefixing
+
+As an alternative to prefixing every notification name string with a reverse-DNS prefix, you can use `centerWithPrefix:` to create a wrapper object around the default Darwin center that automatically appends a prefix to any notification name passed in.
+
+### Swift
+
+```swift
+let notificationCenter = TRZDarwinNotificationCenter.centerWithPrefix("com.thomasrzhao");
+notificationCenter.postNotificationName("TRZDemoNotification");
+```
+
+### Objective-C
+
+```objective-c
+id<TRZNotificationCenter> notificationCenter = [TRZDarwinNotificationCenter centerWithPrefix:@"com.thomasrzhao"];
+[notificationCenter postNotificationName:@"TRZDemoNotification"];
+```
+
+
 ## Common Pitfalls
 
- - When using the block-based API, it is very important to call `removeObserver:name:` with the returned handle object when the notification's action is no longer needed. If the handle object is not removed as an observer, the block will not be deallocated and you will have a memory leak.
+ - When using the block-based API, it is *very* important to call `removeObserver:name:` with the returned handle object when the notification's action is no longer needed. If the handle object is not removed as an observer, the block will not be deallocated and you will have a memory leak.
 
  - Since Darwin notifications do not support the sender object and userInfo values in an NSNotification object, those values are ignored when using the `postNotification:` method.
 
+ - The wrapper object returned from `centerWithPrefix:` still uses `defaultCenter` under the hood. Calling `centerWithPrefix:` multiple times will result in multiple wrapper object instances, but since they simply wrap the `defaultCenter`, they will all behave identically.
+ 
+    For example, in the following code snippet:
+    ```swift
+    let center1 = TRZDarwinNotificationCenter.centerWithPrefix("com.thomasrzhao");
+    let center2 = TRZDarwinNotificationCenter.centerWithPrefix("com.thomasrzhao");
+    center1.addObserverForName("TRZDemoNotification", ...);
+    center2.postNotificationName("TRZDemoNotification");
+    ```
+
+    The observer attached to `center1` will receive the notification posted from `center2` because they use the same prefix. In fact, an observer attached to the `defaultCenter` could also have received the notification if it were added for `"com.thomasrzhao.TRZDemoNotification"`.
+    
+    Also, the NSNotification object sent to the observer will have the full, prefixed name for its name property.
+    
+ - You should probably not subclass or call `init` directly. There is only one Darwin notification center present throughout the OS, so having multiple instances of this class is probably more confusion than it's worth. If you do decide to create multiple instances of TRZDarwinNotificationCenter, each instance will behave independently of one another, meaning an observer attached to one instance will not be called if a notification is posted from another.

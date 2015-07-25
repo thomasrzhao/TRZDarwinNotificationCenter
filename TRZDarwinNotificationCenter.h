@@ -7,6 +7,30 @@
 //
 
 @import Foundation;
+
+NS_ASSUME_NONNULL_BEGIN
+
+/**
+ * A protocol that represents the capabilities provided by a notification center.
+ * This protocol is conformed to by both `TRZDarwinNotificationCenter` and the wrapper object returned by centerWithPrefix:.
+ * Refer to `TRZDarwinNotificationCenter` for information regarding these methods.
+ */
+@protocol TRZNotificationCenter <NSObject>
+
+- (id<NSObject>)addObserverForName:(NSString*)name queue:(nullable NSOperationQueue *)queue usingBlock:(void (^)(NSNotification *))block;
+
+- (void)addObserver:(id)notificationObserver selector:(SEL)notificationSelector name:(NSString *)notificationName;
+
+- (void)removeObserver:(id)notificationObserver;
+
+- (void)removeObserver:(id)notificationObserver name:(nullable NSString *)notificationName;
+
+- (void)postNotification:(NSNotification *)notification;
+
+- (void)postNotificationName:(NSString *)notificationName;
+
+@end
+
 /**
  *  `TRZDarwinNotificationCenter` is a nearly API-compatible version of NSNotificationCenter that delivers and receives system-wide Darwin notifications.
  *
@@ -14,9 +38,7 @@
  *
  *  @warning As Darwin notification names are shared throughout the system, it's important to use a reverse-DNS naming system to avoid collisions. This differs from the standard naming scheme for NSNotifications, so please be cautious.
  */
-
-@interface TRZDarwinNotificationCenter : NSObject
-NS_ASSUME_NONNULL_BEGIN
+@interface TRZDarwinNotificationCenter<TRZNotificationCenter> : NSObject
 
 /**
  *  Returns the default notification center, representing the system-wide Darwin notification center.
@@ -24,6 +46,25 @@ NS_ASSUME_NONNULL_BEGIN
  *  @return The default Darwin notification center.
  */
 + (TRZDarwinNotificationCenter *)defaultCenter;
+
+/**
+ * Returns a wrapper around the default Darwin notification center that automatically prefixes notification names with the specified string.
+ *
+ * Therefore, you can do the following:
+ * @code id<TRZNotificationCenter> notificationCenter = [TRZDarwinNotificationCenter darwinNotificationCenterWithPrefix:@"com.thomasrzhao"];
+ [notificationCenter postNotificationName:@"TRZDemoNotification"];
+ * @endcode
+ * and have that be equivalent to:
+ * @code TRZDarwinNotificationCenter* notificationCenter = [TRZDarwinNotificationCenter defaultCenter];
+ [notificationCenter postNotificationName:@"com.thomasrzhao.TRZDemoNotification"];
+ * @endcode
+ * Note that if the prefix has trailing or leading periods, they will be removed automatically.
+ *
+ * @param prefix String to use as the prefix.
+ *
+ * @return A wrapper around the default Darwin notification center that prefixes the all notification names.
+ */
++ (id<TRZNotificationCenter>)centerWithPrefix:(NSString*)prefix;
 
 /**
  *  Adds an entry to the receiver’s dispatch table with a notification name, queue and a block to add to the queue.
@@ -74,5 +115,6 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)postNotificationName:(NSString *)notificationName;
 
-NS_ASSUME_NONNULL_END
 @end
+
+NS_ASSUME_NONNULL_END
