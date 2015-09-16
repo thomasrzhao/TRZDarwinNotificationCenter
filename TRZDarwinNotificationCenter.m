@@ -95,7 +95,7 @@ NSLog(@"warning: Darwin notification names should be in reverse-DNS style to avo
         
         if(!observerActionMap.count) {
             CFNotificationCenterAddObserver(self.darwinNotificationCenter, (__bridge const void *)(self), &trz_darwin_notification_center_observed_notification, (__bridge CFStringRef)notificationName, NULL, 0);
-            observerActionMap = [NSMapTable mapTableWithKeyOptions:NSMapTableWeakMemory|NSMapTableObjectPointerPersonality valueOptions:NSMapTableCopyIn];
+            observerActionMap = [NSMapTable mapTableWithKeyOptions:NSMapTableWeakMemory|NSMapTableObjectPointerPersonality valueOptions:NSMapTableStrongMemory];
             self.registeredNotifications[notificationName] = observerActionMap;
         }
         
