@@ -38,7 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  @warning As Darwin notification names are shared throughout the system, it's important to use a reverse-DNS naming system to avoid collisions. This differs from the standard naming scheme for NSNotifications, so please be cautious.
  */
-@interface TRZDarwinNotificationCenter<TRZNotificationCenter> : NSObject
+@interface TRZDarwinNotificationCenter : NSObject<TRZNotificationCenter>
 
 /**
  *  Returns the default notification center, representing the system-wide Darwin notification center.
